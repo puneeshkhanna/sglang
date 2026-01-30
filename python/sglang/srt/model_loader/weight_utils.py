@@ -1210,7 +1210,10 @@ def maybe_remap_kv_scale_name(name: str, params_dict: dict) -> Optional[str]:
                 )
             else:
                 remapped_name = name.replace(scale_name, f".attn{scale_name}")
-            if remapped_name not in params_dict:
+            if (
+                remapped_name not in params_dict
+                and remapped_name.replace(".self_attn", "") not in params_dict
+            ):
                 print_warning_once(
                     f"Found {scale_name} in the checkpoint (e.g. {name}), "
                     "but not found the expected name in the model "
