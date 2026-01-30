@@ -33,7 +33,10 @@ from sglang.srt.layers.vocab_parallel_embedding import (
     VocabParallelEmbedding,
 )
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
-from sglang.srt.model_loader.weight_utils import default_weight_loader
+from sglang.srt.model_loader.weight_utils import (
+    default_weight_loader,
+    maybe_remap_kv_scale_name
+)
 from sglang.srt.server_args import get_global_server_args
 from sglang.srt.utils import add_prefix, is_cuda, make_layers
 
@@ -176,6 +179,7 @@ class FalconH1HybridAttentionDecoderLayer(nn.Module):
             self.head_dim,
             self.scaling,
             num_kv_heads=self.num_kv_heads,
+            quant_config=quant_config,
             layer_id=layer_id,
             prefix=f"{prefix}.attn",
         )
@@ -195,6 +199,7 @@ class FalconH1HybridAttentionDecoderLayer(nn.Module):
             rms_norm_eps=config.rms_norm_eps,
             activation=config.hidden_act,
             use_rms_norm=config.mamba_rms_norm,
+            quant_config=quant_config,
             prefix=f"{prefix}.mixer",
         )
 
@@ -529,6 +534,11 @@ class FalconH1ForCausalLM(nn.Module):
 
             if "rotary_emb.inv_freq" in name:
                 continue
+
+            if "scale" in name:
+                name = maybe_remap_kv_scale_name(name, params_dict)
+                if name is None:
+                    continue
 
             if ".self_attn." in name:
                 name = name.replace(".self_attn", "")
